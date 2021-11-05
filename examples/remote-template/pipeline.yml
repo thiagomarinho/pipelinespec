@@ -1,0 +1,32 @@
+pool:
+  vmImage: 'ubuntu-latest'
+
+resources:
+  repositories:
+    - repository: template-repo
+      name: Sample org/pipeline
+      type: git
+      endpoint: ServiceConnection
+
+stages:
+  - template: build.yml@template-repo
+
+  - template: deploy.yml@template-repo
+    parameters:
+      environment: Dev
+      dependsOn: Build
+
+  - template: deploy.yml@template-repo
+    parameters:
+      environment: Ci
+      dependsOn: DeployToDev
+
+  - template: deploy.yml@template-repo
+    parameters:
+      environment: Stage
+      dependsOn: DeployToCi
+
+  - template: deploy.yml@template-repo
+    parameters:
+      environment: Prod
+      dependsOn: DeployToStage

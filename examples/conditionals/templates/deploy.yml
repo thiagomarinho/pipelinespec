@@ -1,0 +1,18 @@
+parameters:
+- name: environment
+  type: string
+- name: dependsOn
+  type: string
+
+stages:
+  - ${{ if or(and(eq(parameters['environment'], 'PR'), not(eq(variables['Build.SourceBranchName'], 'master'))), eq(variables['Build.SourceBranchName'],'master'))  }}:
+    - stage: "DeployTo${{ parameters.environment }}"
+      ${{ if ne(parameters['environment'], 'PR') }}:
+        environment: 'nonprod'
+      ${{ if eq(parameters['environment'], 'PR') }}:
+        anotherEnvironment: 'PROD'
+      dependsOn: ${{ parameters.dependsOn }}
+      jobs:
+      - job: B1
+        steps:
+        - bash: echo "Hello world"

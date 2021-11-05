@@ -1,0 +1,15 @@
+parameters:
+- name: environment
+  type: string
+- name: dependsOn
+  type: string
+
+stages:
+  - stage: "DeployTo${{ parameters.environment }}"
+    ${{ if eq(parameters['environment'], 'Pr') }}:
+      environment: 'PROD'
+    dependsOn: ${{ parameters.dependsOn }}
+    jobs:
+    - job: B1
+      steps:
+      - bash: echo "Hello world"
