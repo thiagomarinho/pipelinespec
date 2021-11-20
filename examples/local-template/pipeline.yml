@@ -1,0 +1,25 @@
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+  - template: templates/build.yml
+
+  - template: templates/deploy.yml
+    parameters:
+      environment: Dev
+      dependsOn: Build
+
+  - template: templates/deploy.yml
+    parameters:
+      environment: Ci
+      dependsOn: DeployToDev
+
+  - template: templates/deploy.yml
+    parameters:
+      environment: Stage
+      dependsOn: DeployToCi
+
+  - template: templates/deploy.yml
+    parameters:
+      environment: Prod
+      dependsOn: DeployToStage

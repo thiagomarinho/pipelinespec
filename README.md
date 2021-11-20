@@ -1,1 +1,2 @@
-Install-Module -Name Pester -Force
+Install-Module Pester
+Install-Module powershell-yaml
