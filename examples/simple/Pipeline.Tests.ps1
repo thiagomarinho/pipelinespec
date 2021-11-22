@@ -1,10 +1,4 @@
-Import-Module powershell-yaml
-
-BeforeDiscovery {
-    Import-Module "$PSScriptRoot/../../src/CustomAssertions.psm1" -DisableNameChecking
-    Import-Module "$PSScriptRoot/../../src/CustomHelpers.psm1" -DisableNameChecking
-    Import-Module "$PSScriptRoot/../../src/CustomAliases.psm1" -DisableNameChecking
-}
+Import-Module "../../Pipelinespec.psm1"
 
 Pipeline 'pipeline.yml' {
     BeforeAll {

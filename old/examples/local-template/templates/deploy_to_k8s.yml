@@ -1,0 +1,10 @@
+parameters:
+- name: namespace
+  type: string
+
+steps:
+  - bash: echo "does something"
+    name: "DoesSomethingOnNamespace${{ parameters.namespace }}"
+  - bash: echo "does another thing"
+    name: DoesAnotherThing
+    condition: succeededOrFailed()
