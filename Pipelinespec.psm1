@@ -316,7 +316,7 @@ function Get-Stage {
 
     $Stage['_meta'] = @{
         Type = "Stage"
-        Name = $Stage.Name
+        Name = $Name
     }
 
     $Stage['jobs'] = Evaluate-Jobs $Stage -Pipeline $Pipeline
@@ -358,7 +358,7 @@ function Get-Job {
 
     $Job['_meta'] = @{
         Type = "Job"
-        Name = $Job.job
+        Name = $Name
     }
 
     $Job['steps'] = Evaluate-Steps $Job -Stage $Stage
@@ -403,7 +403,7 @@ function Get-Step {
 
     $Step['_meta'] = @{
         Type = "Step"
-        Name = $Step.name
+        Name = $Name
     }
 
     return $Step

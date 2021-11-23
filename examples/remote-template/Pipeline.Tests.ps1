@@ -50,7 +50,7 @@ Pipeline 'pipeline.yml' {
         }
 
         It 'Runs after DeployToDev stage' {
-            $Stage | Should -RunAfter 'DeployToDev'
+            $Stage | Should -RunAfter 'DeployToDedv'
         }
     }
 
