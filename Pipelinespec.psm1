@@ -95,13 +95,13 @@ class PipelineLoader {
     [Object] Load() {
         $Pipeline = $this.LoadPipelineFromFile()
 
-        $Pipeline['stages'] = $this.Evaluate($Pipeline, 'Stage', 'stages')
+        $Pipeline['stages'] = $this.Evaluate($Pipeline, 'Stage', 'stages', @($Pipeline))
 
         foreach ($Stage in $Pipeline['stages']) {
-            $Stage['jobs'] = $this.Evaluate($Stage, 'Job', 'jobs')
+            $Stage['jobs'] = $this.Evaluate($Stage, 'Job', 'jobs', @($Stage, $Pipeline))
 
             foreach ($Job in $Stage['jobs']) {
-                $Job['steps'] = $this.Evaluate($Job, 'Step', 'steps')
+                $Job['steps'] = $this.Evaluate($Job, 'Step', 'steps', @($Job, $Stage, $Pipeline))
             }
         }
 
@@ -119,10 +119,10 @@ class PipelineLoader {
         return $Pipeline
     }
 
-    [object[]] Evaluate([object] $Item, [string] $Type, [string] $YamlKey) {
+    [object[]] Evaluate([object] $Item, [string] $Type, [string] $YamlKey, [array] $Context) {
         $Evaluated = $Item[$YamlKey] | ForEach-Object {
             if ($_['template']) {
-                $this.TemplateLoader.Load($_, $Type, $YamlKey)
+                $this.TemplateLoader.Load($_, $Type, $YamlKey, $Context)
             } else {
                 $_
             }
@@ -144,8 +144,47 @@ class TemplateLoader {
         $this.RepoStack = @(".")
     }
 
-    [object] Load([object] $Item, [string] $Type, [string] $YamlKey) {
-        $TemplateFile = $Item['template']
+    [array] ParseTemplateMetadata([object] $Template, [array] $Context) {
+        if ($this.IsRemoteTemplate($Template)) {
+            return $Template['template'].Split('@')
+        }
+
+        $ItemWithMetadata = $Context | Where-Object { $null -ne $_['_meta'] -and $null -ne $_['_meta']['repo'] } | Select-Object -First 1 
+
+        if ($null -ne $ItemWithMetadata) {
+            return $Template['template'], $ItemWithMetadata['_meta']['repo']
+        }
+
+        return $Template['template'], '.'
+    }
+
+    [object] Load([object] $Template, [string] $Type, [string] $YamlKey, [array] $Context) {
+        $TemplateName, $TemplateRepo = $this.ParseTemplateMetadata($Template, $Context)
+
+        $YamlContent = $this.LoadTemplate($Template, $TemplateName, $TemplateRepo, $Type)
+
+        # TODO validate parameters not found
+        # TODO validate required parameters not defined
+
+        foreach($Item in $YamlContent[$YamlKey]) {
+            $Item['_meta'] = @{
+                repo = $TemplateRepo
+            }
+        }
+
+        return $YamlContent[$YamlKey]
+    }
+
+    [boolean] IsRemoteTemplate([object] $Template) {
+        return $Template['template'].Contains("@")
+    }
+
+    [object] LoadTemplate([object] $Template, [string] $TemplateName, [string] $TemplateRepo, [string] $Type) {
+        if ($TemplateRepo -eq '.') {
+            $TemplateFile = $Template
+        } else {
+            $TemplateFile = "fixtures/${TemplateRepo}/${TemplateName}"
+        }
 
         if (![System.IO.File]::Exists($TemplateFile)) {
             throw "Template not found: ${TemplateFile}"
@@ -153,23 +192,89 @@ class TemplateLoader {
 
         $TemplateContent = Get-Content $TemplateFile -Raw
 
-        if ($Item['parameters']) {
-            foreach ($Parameter in $Item['parameters'].GetEnumerator()) {
+        if ($Template['parameters']) {
+            foreach ($Parameter in $Template['parameters'].GetEnumerator()) {
                 $TemplateContent = $TemplateContent.Replace("`${{ parameters.$($parameter.Name) }}", $Parameter.Value)
             }
         }
 
-        $YamlTemplateContent = ConvertFrom-Yaml $TemplateContent
-
-        # TODO validate parameters not found
-        # TODO validate required parameters not defined
-
-        return $YamlTemplateContent[$YamlKey]
+        return ConvertFrom-Yaml $TemplateContent
     }
 }
 
 # ---
 # helpers
+
+function Add-RemoteGitRepository {
+    param (
+        [Parameter(Mandatory = $true, Position = 0)]
+        [String]
+        $ResourceName,
+
+        [Parameter(Mandatory = $true, Position = 1)]
+        [String]
+        $Url
+    )
+
+    Safe-CreateDir "./fixtures" 
+
+    if (Test-Path "./fixtures/${ResourceName}") {
+        if (Test-Path "./fixtures/${ResourceName}/.git") {
+            git -C "./fixtures/${ResourceName}" pull
+        } else {
+            Write-Warning "Resource ${ResourceName} already exists at ./fixtures/${$ResourceName} and it's not a git repository"
+        }
+    } else {
+        git clone $Url  "./fixtures/${ResourceName}"
+    }
+}
+
+function Add-LocalDirectory {
+    param (
+        [Parameter(Mandatory = $true, Position = 0)]
+        [String]
+        $ResourceName,
+
+        [Parameter(Mandatory = $true)]
+        [String]
+        $Directory
+    )
+
+    Safe-CreateDir "./fixtures" 
+    Safe-CopyDirRecursively -SourceDirectory $Directory -TargetDirectory "./fixtures/${ResourceName}"
+}
+
+function Safe-CreateDir {
+    param (
+        [Parameter(Mandatory = $true, Position = 0)]
+        [String]
+        $Directory
+    )
+
+    if (!(Test-Path $Directory)) {
+        New-Item $Directory -ItemType "Directory"
+    } else {
+        Write-Information "Directory ${Directory} already exists"
+    }
+}
+
+function Safe-CopyDirRecursively {
+    param (
+        [Parameter(Mandatory = $true, Position = 0)]
+        [String]
+        $SourceDirectory,
+
+        [Parameter(Mandatory = $true, Position = 1)]
+        [String]
+        $TargetDirectory
+    )
+
+    if (!(Test-Path $SourceDirectory)) {
+        Write-Warning "Directory ${SourceDirectory} not found"
+    } else {
+        Copy-Item $SourceDirectory -Destination $TargetDirectory -Recurse
+    }
+}
 
 function Get-Pipeline {
     param (
