@@ -1,7 +1,0 @@
-stages:
-- stage: Build
-  jobs:
-  - job: Build
-    steps:
-      - bash: echo "Hello world"
-  - template: templates/security_scan.yml

@@ -1,9 +1,0 @@
-jobs:
-  - job: SecurityScan
-    condition: and(succeeded(), eq(variables['build.sourceBranch'], 'refs/heads/master'))
-    steps:
-      - bash: echo "run scan"
-        name: RunScan
-      - bash: echo "publish result"
-        name: Publish
-        condition: succeededOrFailed()

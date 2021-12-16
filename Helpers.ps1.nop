@@ -16,19 +16,19 @@ function Get-Pipeline {
     return $Pipeline
 }
 
-function Evaluate-Stages {
-    param (
-        [Parameter(Mandatory = $true, Position = 0)]
-        [Object]
-        $Pipeline
-    )
+# function Evaluate-Stages {
+#     param (
+#         [Parameter(Mandatory = $true, Position = 0)]
+#         [Object]
+#         $Pipeline
+#     )
 
-    if () {
+#     if () {
         
-    } else 
-        return $Pipeline['stages']
-    }
-}
+#     } else 
+#         return $Pipeline['stages']
+#     }
+# }
 
 function Get-Stage {
     [CmdletBinding()]
