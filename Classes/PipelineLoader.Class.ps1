@@ -37,7 +37,7 @@ class PipelineLoader {
     }
 
     [object[]] Evaluate([object] $Item, [string] $Type, [string] $YamlKey, [array] $Context) {
-        $Evaluated = $Item[$YamlKey] | ForEach-Object {
+        $Evaluated = $Item[$YamlKey] | ForEach-Object {    
             if ($_['template']) {
                 $this.TemplateLoader.Load($_, $Type, $YamlKey, $Context)
             } else {
@@ -45,34 +45,124 @@ class PipelineLoader {
             }
         }
 
-        # TODO this will be moved from here later
-        foreach ($Thing in $Evaluated.GetEnumerator()) {
-            if ($Thing.GetType().Name -eq 'hashtable') {
-                $Thing['_meta'] = @{
-                    Type = $Type
-                    Name = $Item.Name
-                }
+        if ($Evaluated) {
+            $ToBeReturned = @()
 
-                foreach ($Property in $Thing.GetEnumerator()) {
-                    if ($Property.Name.StartsWith('${{')) {
-                        $Expression = [Expression]::new($Property)
+            foreach ($Thing in $Evaluated.GetEnumerator()) {
+                # this means that we have a conditional block... right?
+                if ($Thing.GetType().Name -eq 'hashtable') {
+                    $IsConditionalBlock = $false
 
-                        $Context = @{
-                            Parameters = @{};
-                            Variables = @{};
+                    foreach ($Property in $Thing.GetEnumerator()) {
+                        if ($Property.Name.StartsWith('${{')) {
+                            $IsConditionalBlock = $true
+                            break
+                        }
+                    }
+
+                    $Block = $null
+
+                    if ($IsConditionalBlock) {
+                        $Expression = [Expression]::new($Property.Name, $Property.Value)
+
+                        if ($Expression.Evaluate($Global:__PipelineContext)) {
+                            $Block = $Property.Value[0]
+                        }
+                    } else {
+                        $Block = $Thing
+                    }
+
+                    if ($Block) {
+                        $Block = Evaluate-ConditionalProperties -Block $Block -Context $Context
+
+                        $Block['_meta'] = @{
+                            Type = $Type
+                            Name = $Item.Name
                         }
 
-                        Write-Host $Expression.Condition().Type
-                        Write-Host $Expression.Condition().Expression.Count
-                        Write-Host $Expression.Evaluate($Context)
+                        $ToBeReturned += $Block
                     }
+                } else {
+                    $Evaluated = Evaluate-ConditionalProperties -Block $Evaluated -Context $Context
+
+                    $Evaluated['_meta'] = @{
+                        Type = $Type
+                        Name = $Item.Name
+                    }
+
+                    $ToBeReturned += $Evaluated
+
+                    break
                 }
             }
-            # elseif ($Thing.GetType().Name -eq 'DictionaryEntry') {
-            #     Write-Host $Thing.Key
-            # }
+
+            return $ToBeReturned
         }
 
-        return $Evaluated
+        Write-Host "Couldn't find ${YamlKey}"
+
+        return $null
     }
+}
+
+Function Evaluate-ConditionalProperties {
+    param (
+        [hashtable]
+        $Block,
+
+        [array]
+        $Context
+    )
+
+    $ValuesToAdd = @()
+    $KeysToRemove = @()
+
+    foreach ($Property in $Block.GetEnumerator()) {
+        if ($Property.Name.StartsWith('${{')) {
+            $KeysToRemove += $Property.Name
+
+            $Expression = [Expression]::new($Property.Name, $Property.Value)
+
+            $PipelineContext = @{
+                Variables = $Global:__PipelineContext.Variables;
+                Parameters = @{};
+            }
+
+            if ($Block['_meta'] -and $Block['_meta']['Parameters']) {
+                $PipelineContext['Parameters'] = $Block['_meta']['Parameters']
+            }
+
+            if ($Expression.Evaluate($PipelineContext)) {
+                foreach ($ValueToAdd in $Property.Value) {
+                    $ValuesToAdd += $Property.Value
+                }
+            }
+        }
+    }
+
+    foreach ($Key in $KeysToRemove) {
+        $Block.Remove($Key)
+    }
+
+    foreach ($Value in $ValuesToAdd) {
+        foreach ($Property in $Value.GetEnumerator()) {
+            $Block[$Property.Key] = $Property.Value
+        }
+    }
+
+    return $Block
+}
+
+Function Print-YamlBlock {
+    param (
+        [object]
+        $Block,
+
+        [string]
+        $Color = "Cyan"
+    )
+
+    Write-Host '```' -ForegroundColor $Color
+    Write-Host ($Block | ConvertTo-Yaml) -ForegroundColor $Color
+    Write-Host '```' -ForegroundColor $Color
 }

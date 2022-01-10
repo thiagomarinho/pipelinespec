@@ -1,7 +1,12 @@
 Import-Module "../../Pipelinespec.psm1"
 
+# TODO evaluate conditional properties
+
 Pipeline 'pipeline.yml' {
     BeforeAll {
+        Set-PipelineContext
+        Set-PipelineVariable -Name 'Build.SourceBranchName' -Value 'master'
+
         $Pipeline = Get-Pipeline 'pipeline.yml'
     }
 

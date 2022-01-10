@@ -4,9 +4,9 @@ class Expression {
     [object] $Expression
     [object] $Value
 
-    Expression([object] $Property) {
-        $this.Expression = Get-Expression $Property.Name
-        $this.Value = $Property.Value
+    Expression([string] $Expression, [object] $Value) {
+        $this.Expression = Get-Expression $Expression
+        $this.Value = $Value
     }
 
     # XXX rename this?

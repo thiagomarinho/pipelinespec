@@ -7,11 +7,21 @@ function Get-FromContext {
         $Context
     )
 
-    if ($Reference.Contains("variables[")) {
-        return $Context.Variables[$Reference.Replace("variables[`"", "").Replace("`"]", "")]
+    if ($Context -eq $null) {
+        throw "Context not initialized. Please make sure you are calling Set-PipelineContext"
     }
 
-    return $Context.Parameters[$Reference]
+    if ($Reference.Contains("variables[")) {
+        $Key = $Reference.Replace("variables[`"", "").Replace("`"]", "").Replace("variables['", "").Replace("']", "")
+        return $Context.Variables[$Key]
+    }
+
+    if ($Reference.Contains("parameters[")) {
+        $Key = $Reference.Replace("parameters[`"", "").Replace("`"]", "").Replace("parameters['", "").Replace("']", "")
+        return $Context.Parameters[$Key]
+    }
+
+    throw "Unexpected reference: ${Reference}"
 }
 
 function Evaluate-Expression {
@@ -22,6 +32,7 @@ function Evaluate-Expression {
         [Object]
         $Context
     )
+
     # well... do it better
     if ($Expression -is [String]) {
         if ($Expression -eq "true") {
@@ -32,7 +43,7 @@ function Evaluate-Expression {
             return $false
         }
 
-        raise "Unexpected expression: ${Expression}"
+        throw "Unexpected expression: ${Expression}"
     }
 
     if ($Expression.Type -eq 'if') {
@@ -53,6 +64,10 @@ function Evaluate-Expression {
             $ValueFromContext = "`"${ValueFromContext}`""
         }
 
+        if ($ValueFromExpression.StartsWith("'") -and $ValueFromExpression.EndsWith("'")) {
+            $ValueFromContext = "'${ValueFromContext}'"
+        }
+
         return $ValueFromContext -ne $ValueFromExpression
     }
 
@@ -62,6 +77,10 @@ function Evaluate-Expression {
 
         if ($ValueFromExpression.StartsWith('"') -and $ValueFromExpression.EndsWith('"')) {
             $ValueFromContext = "`"${ValueFromContext}`""
+        }
+
+        if ($ValueFromExpression.StartsWith("'") -and $ValueFromExpression.EndsWith("'")) {
+            $ValueFromContext = "'${ValueFromContext}'"
         }
 
         return $ValueFromContext -eq $ValueFromExpression

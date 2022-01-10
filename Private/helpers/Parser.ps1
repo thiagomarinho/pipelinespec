@@ -48,7 +48,8 @@ function Get-Expression {
     $EvaluatedExpression = @()
 
     if ($Expression.StartsWith('${{ if ')) {
-        $ExpressionWithoutWrappers = $Expression.Replace('${{ if', '').Replace('}}:', '').Trim()
+        # it could end with either }} or }}:
+        $ExpressionWithoutWrappers = $Expression.Replace('${{ if', '').Replace('}}:', '').Replace('}}', '').Trim()
         $Type = "if"
 
         if ($ExpressionWithoutWrappers.Contains("(")) {

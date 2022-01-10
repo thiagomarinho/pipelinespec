@@ -1,6 +1,7 @@
 # Subject or Context?
 
 # Get-Variable already exists :/
+# TODO change to Get-PipelineVariable
 function Fetch-Variable {
     [CmdletBinding()]
     param (

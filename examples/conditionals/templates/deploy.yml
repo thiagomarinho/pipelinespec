@@ -7,8 +7,6 @@ parameters:
 stages:
   - ${{ if or(and(eq(parameters['environment'], 'PR'), not(eq(variables['Build.SourceBranchName'], 'master'))), eq(variables['Build.SourceBranchName'],'master'))  }}:
     - stage: "DeployTo${{ parameters.environment }}"
-      ${{ if ne(stage.name, 'NonProd') }}:
-        condition: and(succeeded(), eq(variables['Build.SourceBranchName'], 'master'))
       ${{ if ne(parameters['environment'], 'PR') }}:
         environment: 'nonprod'
       ${{ if eq(parameters['environment'], 'PR') }}:

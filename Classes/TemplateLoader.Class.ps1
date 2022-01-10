@@ -22,6 +22,14 @@ class TemplateLoader {
         # TODO validate required parameters not defined
 
         foreach($Item in $YamlContent[$YamlKey]) {
+            if ($YamlContent['_meta'] -and $YamlContent['_meta']['Parameters']) {
+                if (!$Item['_meta']) {
+                    $Item['_meta'] = @{}
+                }
+
+                $Item['_meta']['Parameters'] = $YamlContent['_meta']['Parameters']
+            }
+
             $PossibleContentWithMetadata = @('stages', 'jobs', 'steps')
 
             foreach ($PossibleContent in $PossibleContentWithMetadata) {
@@ -44,8 +52,6 @@ class TemplateLoader {
     }
 
     [object] LoadTemplate([object] $Template, [string] $TemplateName, [string] $TemplateRepo, [string] $Type) {
-        Write-Host "Loading template ${TemplateName} from repo ${TemplateRepo}"
-
         if ($TemplateRepo -eq '.') {
             $TemplateFile = $TemplateName
         } else {
@@ -60,10 +66,22 @@ class TemplateLoader {
 
         if ($Template['parameters']) {
             foreach ($Parameter in $Template['parameters'].GetEnumerator()) {
-                $TemplateContent = $TemplateContent.Replace("`${{ parameters.$($parameter.Name) }}", $Parameter.Value)
+                $TemplateContent = $TemplateContent.Replace("`${{ parameters.$($Parameter.Name) }}", $Parameter.Value)
             }
         }
 
-        return ConvertFrom-Yaml $TemplateContent
+        $Converted = ConvertFrom-Yaml $TemplateContent
+
+        $Converted['_meta'] = @{
+            Parameters = @{}
+        }
+
+        if ($Template['parameters']) {
+            foreach ($Parameter in $Template['parameters'].GetEnumerator()) {
+                $Converted['_meta']['parameters'][$Parameter.Name] = $Parameter.Value
+            }
+        }
+
+        return $Converted
     }
 }

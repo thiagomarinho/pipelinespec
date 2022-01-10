@@ -27,7 +27,7 @@ Foreach($import in @($Classes)) {
 Foreach($import in @($Public + $Private)) {
     Try
     {
-        Write-Host -Message "Loading $($import.fullname)"
+        Write-Verbose -Message "Loading $($import.fullname)"
         . $import.fullname
     }
     Catch
