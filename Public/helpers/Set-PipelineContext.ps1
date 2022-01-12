@@ -1,5 +1,6 @@
 function Set-PipelineContext {
-    Write-Host 'Set PipelineContext'
+    Write-Debug 'Setting PipelineContext'
+
     $Global:__PipelineContext = @{
         Parameters = @{};
         Variables = @{};
