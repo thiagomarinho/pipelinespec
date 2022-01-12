@@ -75,20 +75,24 @@ class PipelineLoader {
                     if ($Block) {
                         $Block = Evaluate-ConditionalProperties -Block $Block -Context $Context
 
-                        $Block['_meta'] = @{
-                            Type = $Type
-                            Name = $Item.Name
+                        if (!$Block['_meta']) {
+                            $Block['_meta'] = @{}
                         }
+
+                        $Block['_meta']['Type'] = $Type
+                        $Block['_meta']['Name'] = $Item.Name
 
                         $ToBeReturned += $Block
                     }
                 } else {
                     $Evaluated = Evaluate-ConditionalProperties -Block $Evaluated -Context $Context
 
-                    $Evaluated['_meta'] = @{
-                        Type = $Type
-                        Name = $Item.Name
+                    if (!$Evaluated['_meta']) {
+                        $Evaluated['_meta'] = @{}
                     }
+
+                    $Evaluated['_meta']['Type'] = $Type
+                    $Evaluated['_meta']['Name'] = $Item.Name
 
                     $ToBeReturned += $Evaluated
 
