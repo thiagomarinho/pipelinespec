@@ -16,7 +16,7 @@ Pipeline 'pipeline.yml' {
             $Stage = Get-Stage 'DeployToDev' -Pipeline $Pipeline
         }
 
-        It 'Points to prod environment' {
+        It 'Points to nonprod environment' {
             Fetch-Property 'environment' -Stage $Stage | Should -Be 'nonprod'
         }
     }
