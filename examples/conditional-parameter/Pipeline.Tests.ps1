@@ -1,7 +1,5 @@
 Import-Module "../../Pipelinespec.psm1"
 
-# TODO evaluate conditional properties
-
 Pipeline 'pipeline.yml' {
     BeforeAll {
         Set-PipelineContext
