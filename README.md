@@ -1,29 +1,46 @@
 # Pre-requisites
 
-- Install-Module Pester
-- Install-Module powershell-yaml
-- git
+This module has a few dependencies:
+
+- Install-Module Pester (to run the tests)
+- Install-Module powershell-yaml (to load the pipeline)
+- git (to fetch remote modules)
 
 # Usage
 
-Install-Module Pipelinespec
-Import-Module Pipelinespec
+- Define your `Pipeline.Tests.ps1` file in the same folder your pipeline is
+- Run:
 
+```shell
+Invoke-Pester
+```
+
+or:
+
+```shell
 ./Pipeline.Tests.ps1
+```
 
 # Development/testing
 
-# Known limitations
-- for each template not supported yet
+To avoid the need to reload your module after every change, if you are using bash/zsh/etc you can run this:
+```
+pwsh -Command "Invoke-Pester"
+```
 
-- you can not use the same key twice:
+# Known bugs and limitations
+- It doesn't validate if the mentioned dependsOn block exists;
+- You can not use the same key twice:
+```
 [-] Describe pipeline.yml failed
  ArgumentException: An item with the same key has already been added. Key: ${{ if eq(parameters['environment'], 'PR') }}
  YamlException: (Line: 14, Col: 7, Idx: 513) - (Line: 14, Col: 52, Idx: 558): Duplicate key
+```
 
 # TODO
-- foreach expression
-- extend template
+- `foreach` expression;
+- `else` expression;
+- `extend` template.
 
 # Reference/links
 - https://docs.microsoft.com/en-us/azure/devops/pipelines/process/templates?view=azure-devops

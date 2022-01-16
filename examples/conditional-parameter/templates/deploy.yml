@@ -1,0 +1,14 @@
+parameters:
+- name: environment
+  type: string
+
+stages:
+  - stage: "DeployTo${{ parameters.environment }}"
+    ${{ if ne(parameters['environment'], 'Prod') }}:
+      environment: 'nonprod'
+    ${{ if eq(parameters['environment'], 'Prod') }}:
+      environment: 'PROD'
+    jobs:
+    - job: Job
+      steps:
+      - bash: echo "Hello world"

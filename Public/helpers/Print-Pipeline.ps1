@@ -2,17 +2,35 @@ Function Print-Pipeline {
     [CmdletBinding()]
     param (
         [object]
-        $Pipeline
+        $Pipeline,
+
+        [switch]
+        $Details = $false
     )
 
-    Write-Host "Printing simplified pipeline"
-    Write-Host ($Pipeline | ConvertTo-Yaml) | Out-String
+    if ($Details) {
+        Write-Host "Printing simplified pipeline"
+        Write-Host (($Pipeline | ConvertTo-Yaml) | Out-String) -ForegroundColor Green
+        Write-Host "---"
+    }
 
     foreach ($Stage in $Pipeline['stages']) {
-        Write-Host "$($Stage.stage) (stage)" -ForegroundColor Yellow
+        $StageDescription = "$($Stage.stage) (stage)"
+
+        if ($Stage.dependsOn) {
+            $StageDescription += " [dependsOn $($Stage.dependsOn)]"
+        }
+
+        Write-Host $StageDescription -ForegroundColor Yellow
 
         foreach ($Job in $Stage['jobs']) {
-            Write-Host "  $($Job.job) (job)" -ForegroundColor Blue
+            $JobDescription = "  $($Job.job) (job)"
+
+            if ($Job.dependsOn) {
+                $JobDescription += " [dependsOn $($Job.dependsOn)]"
+            }
+
+            Write-Host $JobDescription -ForegroundColor Blue
         }
     }
 }

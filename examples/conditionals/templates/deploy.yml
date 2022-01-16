@@ -5,12 +5,12 @@ parameters:
   type: string
 
 stages:
-  - ${{ if or(and(eq(parameters['environment'], 'PR'), not(eq(variables['Build.SourceBranchName'], 'master'))), eq(variables['Build.SourceBranchName'],'master'))  }}:
+  - ${{ if or(and(eq(parameters['environment'], 'Prod'), not(eq(variables['Build.SourceBranchName'], 'master'))), eq(variables['Build.SourceBranchName'],'master')) }}:
     - stage: "DeployTo${{ parameters.environment }}"
-      ${{ if ne(parameters['environment'], 'PR') }}:
+      ${{ if ne(parameters['environment'], 'Prod') }}:
         environment: 'nonprod'
-      ${{ if eq(parameters['environment'], 'PR') }}:
-        anotherEnvironment: 'PROD'
+      ${{ if eq(parameters['environment'], 'Prod') }}:
+        environment: 'PROD'
       dependsOn: ${{ parameters.dependsOn }}
       jobs:
       - job: B1

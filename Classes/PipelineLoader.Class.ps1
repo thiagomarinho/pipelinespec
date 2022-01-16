@@ -36,8 +36,53 @@ class PipelineLoader {
         return $Pipeline
     }
 
+    [String] GetConditionalKey([hashtable] $Evaluated) {
+        if ($Evaluated.Count -eq 2) {
+            if ($Evaluated._meta) {
+                # TODO this can also be a foreach in the future
+
+                return $Evaluated.Keys | Where-Object { $_.StartsWith('${{') }
+            }
+        }
+
+        return $null
+    }
+
+    [object[]] GetItem([hashtable] $Evaluated, [object] $Item, [string] $Type, [array] $Context) {
+        $Block = $null
+        $ConditionalKey = $this.GetConditionalKey($Evaluated)
+
+        if ($ConditionalKey) {
+            $ConditionalBlock = $Evaluated[$ConditionalKey][0]
+
+            $Expression = [Expression]::new($ConditionalKey, $ConditionalBlock)
+            $PipelineContext = Get-PipelineContext $Evaluated
+
+            if ($Expression.Evaluate($PipelineContext)) {
+                $Block = $ConditionalBlock
+                $Block._meta = $Evaluated._meta
+            }
+        } else {
+            $Block = $Evaluated
+        }
+
+        if ($Block) {
+            # now this is not working again
+            $Block = Evaluate-ConditionalProperties -Block $Block -Context $Context
+
+            if (!$Block['_meta']) {
+                $Block['_meta'] = @{}
+            }
+
+            $Block['_meta']['Type'] = $Type
+            $Block['_meta']['Name'] = $Item.Name # XXX not working
+        }
+
+        return $Block
+    }
+
     [object[]] Evaluate([object] $Item, [string] $Type, [string] $YamlKey, [array] $Context) {
-        $Evaluated = $Item[$YamlKey] | ForEach-Object {    
+        $EvaluatedValues = $Item[$YamlKey] | ForEach-Object {    
             if ($_['template']) {
                 $this.TemplateLoader.Load($_, $Type, $YamlKey, $Context)
             } else {
@@ -45,68 +90,42 @@ class PipelineLoader {
             }
         }
 
-        if ($Evaluated) {
-            $ToBeReturned = @()
+        if ($EvaluatedValues) {
+            if ($EvaluatedValues.GetType().Name -eq 'hashtable' -or $EvaluatedValues -is [System.Collections.Hashtable]) {
+                return $this.GetItem($EvaluatedValues, $Item, $Type, $Context)
+            } else {
+                $ToBeReturned = @()
 
-            foreach ($Thing in $Evaluated.GetEnumerator()) {
-                # this means that we have a conditional block... right?
-                if ($Thing.GetType().Name -eq 'hashtable') {
-                    $IsConditionalBlock = $false
-
-                    foreach ($Property in $Thing.GetEnumerator()) {
-                        if ($Property.Name.StartsWith('${{')) {
-                            $IsConditionalBlock = $true
-                            break
-                        }
-                    }
-
-                    $Block = $null
-
-                    if ($IsConditionalBlock) {
-                        $Expression = [Expression]::new($Property.Name, $Property.Value)
-
-                        if ($Expression.Evaluate($Global:__PipelineContext)) {
-                            $Block = $Property.Value[0]
-                        }
-                    } else {
-                        $Block = $Thing
-                    }
-
-                    if ($Block) {
-                        $Block = Evaluate-ConditionalProperties -Block $Block -Context $Context
-
-                        if (!$Block['_meta']) {
-                            $Block['_meta'] = @{}
-                        }
-
-                        $Block['_meta']['Type'] = $Type
-                        $Block['_meta']['Name'] = $Item.Name
-
-                        $ToBeReturned += $Block
-                    }
-                } else {
-                    $Evaluated = Evaluate-ConditionalProperties -Block $Evaluated -Context $Context
-
-                    if (!$Evaluated['_meta']) {
-                        $Evaluated['_meta'] = @{}
-                    }
-
-                    $Evaluated['_meta']['Type'] = $Type
-                    $Evaluated['_meta']['Name'] = $Item.Name
-
-                    $ToBeReturned += $Evaluated
-
-                    break
+                foreach ($EvaluatedValue in $EvaluatedValues) {
+                    $ToBeReturned += $This.GetItem($EvaluatedValue, $Item, $Type, $Context)
                 }
-            }
 
-            return $ToBeReturned
+                return $ToBeReturned
+            }
         }
 
         Write-Host "Couldn't find ${YamlKey}"
 
         return $null
     }
+}
+
+Function Get-PipelineContext {
+    param (
+        [hashtable]
+        $Block
+    )
+
+    $PipelineContext = @{
+        Variables = $Global:__PipelineContext.Variables;
+        Parameters = @{};
+    }
+
+    if ($Block['_meta'] -and $Block['_meta']['Parameters']) {
+        $PipelineContext['Parameters'] = $Block['_meta']['Parameters']
+    }
+
+    return $PipelineContext
 }
 
 Function Evaluate-ConditionalProperties {
@@ -127,14 +146,7 @@ Function Evaluate-ConditionalProperties {
 
             $Expression = [Expression]::new($Property.Name, $Property.Value)
 
-            $PipelineContext = @{
-                Variables = $Global:__PipelineContext.Variables;
-                Parameters = @{};
-            }
-
-            if ($Block['_meta'] -and $Block['_meta']['Parameters']) {
-                $PipelineContext['Parameters'] = $Block['_meta']['Parameters']
-            }
+            $PipelineContext = Get-PipelineContext $Block
 
             if ($Expression.Evaluate($PipelineContext)) {
                 foreach ($ValueToAdd in $Property.Value) {

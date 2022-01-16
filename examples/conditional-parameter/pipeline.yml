@@ -1,0 +1,11 @@
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+  - template: templates/deploy.yml
+    parameters:
+      environment: Dev
+
+  - template: templates/deploy.yml
+    parameters:
+      environment: Prod

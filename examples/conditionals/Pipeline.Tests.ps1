@@ -8,6 +8,7 @@ Pipeline 'pipeline.yml' {
         Set-PipelineVariable -Name 'Build.SourceBranchName' -Value 'master'
 
         $Pipeline = Get-Pipeline 'pipeline.yml'
+        Print-Pipeline $Pipeline
     }
 
     It 'Defines an app name' {
@@ -62,6 +63,10 @@ Pipeline 'pipeline.yml' {
         It 'Runs after DeployToDev stage' {
             $Stage | Should -RunAfter 'DeployToDev'
         }
+
+        It 'Points to nonprod environment' {
+            Fetch-Property 'environment' -Stage $Stage | Should -Be 'nonprod'
+        }
     }
 
     Stage 'DeployToStage' {
@@ -72,11 +77,23 @@ Pipeline 'pipeline.yml' {
         It 'Runs after DeployToCi stage' {
             $Stage | Should -RunAfter 'DeployToCi'
         }
+
+        It 'Points to nonprod environment' {
+            Fetch-Property 'environment' -Stage $Stage | Should -Be 'nonprod'
+        }
     }
 
     Stage 'DeployToProd' {
         BeforeAll {
             $Stage = Get-Stage 'DeployToProd' -Pipeline $Pipeline
+        }
+
+        # It 'Runs when a push to master happens' {
+        #     $Stage | Should -RunWhenPushTo 'master'
+        # }
+
+        It 'Points to prod environment' {
+            Fetch-Property 'environment' -Stage $Stage | Should -Be 'PROD'
         }
 
         It 'Runs after DeployToStage stage' {
