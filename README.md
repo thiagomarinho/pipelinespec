@@ -4,14 +4,14 @@ Create and maintain your pipelines like code and with tests :)
 
 Currently it only supports Azure Pipelines.
 
-## What Pipelinespec can do?
+## What Pipelinespec can do
 
 - Test hierarchy and dependencies defined in your pipeline;
 - Test conditional logic (`${{ if }}` expressions);
 - Test property names;
 - Test templating functionality.
 
-## What Pipelinespec can't do?
+## What Pipelinespec can't do
 
 - Run steps/tasks;
 - Download container or VM images;
